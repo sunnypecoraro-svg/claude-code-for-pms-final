@@ -24,6 +24,12 @@ prompt library built from your own questions.
 
 ### 1.
 
+What's contradictory or missing, not just in the company documents, but across everything in 00-rook?
+
 ### 2.
 
+What data sources can we check to pull the actual September data?
+
 ### 3.
+
+Is this the next step you'd suggest? In my position summarize in order what my next actions should be
