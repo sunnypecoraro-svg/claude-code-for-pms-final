@@ -2,6 +2,9 @@
 
 For Helen Achebe · Dispatch PM · 9 Oct 2026 · Draft
 
+**Owner:** Dispatch PM, accountable for delivery, with Marcus Oyelaran for engineering.
+**Scope:** fix recovery and visibility together. The Q3 triage of items squeezed out of 4.2 rides along as a separate decision (last ask below).
+
 ## The problem
 Since release 4.2 (12 Aug), callouts that nobody takes have roughly doubled: **5.1% before, 11.2% since** (43 of 837 callouts, then 54 of 482). Small samples, but the step happens on release day.
 
@@ -21,6 +24,9 @@ The ranking treats a missed ping like a turn-down and never forgives it. Once a 
 
 **Not changing:** the nearby-first ranking from 4.2. This is not a revert.
 
+## How we'll know it worked
+Within two weeks of the change: unanswered callouts back toward the **5.1%** we had before 4.2 (now 11.2%), and each of the four affected responders back above **60% taken** (now 29–35%). Missed pings back toward the pre-4.2 level of about 2% (now 18%) is the early signal, and turn-downs should not rise.
+
 ## What we don't know yet
 - Whether the four recovered in September (our data ends 6–7 Sep).
 - Whether 90 seconds alone is enough. Proposed test: restore 90 seconds, add the recovery, reset the four, then watch them for two weeks.
@@ -28,6 +34,6 @@ The ranking treats a missed ping like a turn-down and never forgives it. Once a 
 
 ## What I need from you
 - **Agreement on direction:** fix recovery and visibility together, rather than quietly changing one number.
-- **OK to take it to Marcus, Wen Li and Sofia** this week for a test plan and design.
+- **OK to take it to Marcus, Wen Li and Sofia** this week for a test plan and design, including whether to restore the 90-second answer time (item 3 above).
 - **A view on whether handlers can request a fresh start,** or whether recovery should be automatic only.
 - **A slot for the Q3 triage** of items squeezed out of 4.2 (e.g. Availability Confidence).
