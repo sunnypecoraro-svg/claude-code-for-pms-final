@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Dispatch: what we'd build instead of changing a number</title>
+<style>
+  body{font:15px/1.5 Arial,Helvetica,sans-serif;color:#1f2933;max-width:860px;margin:24px auto;padding:0 20px}
+  h1{font-size:22px;margin:0 0 2px}
+  h2{font-size:14px;text-transform:uppercase;letter-spacing:.06em;color:#52606d;margin:22px 0 6px;border-bottom:1px solid #d9e2ec;padding-bottom:3px}
+  .meta{color:#52606d;font-size:13px;margin-bottom:12px}
+  ul{margin:4px 0 4px 18px;padding:0}
+  li{margin:3px 0}
+  .ask{background:#fff8e1;border-left:4px solid #f0b429;padding:8px 12px;margin:10px 0}
+  .small{font-size:12.5px;color:#52606d}
+  .tabs button,.toggle button{border:1px solid #9aa5b1;background:#fff;padding:6px 12px;cursor:pointer;font-size:13px}
+  .tabs button.on,.toggle button.on{background:#1f2933;color:#fff;border-color:#1f2933}
+  .stage{border:1px solid #d9e2ec;background:#f5f7fa;padding:14px;margin-top:8px}
+  .cards{display:flex;gap:12px;flex-wrap:wrap}
+  .card{background:#fff;border:1px solid #cbd2d9;border-radius:6px;padding:10px 12px;width:300px}
+  .card h3{margin:0 0 4px;font-size:15px}
+  .stat{font-size:13px;color:#52606d}
+  .flag{background:#fff3c4;border:1px solid #f0b429;border-radius:4px;padding:6px 8px;margin-top:8px;font-size:13px}
+  .flag button{margin-top:6px;border:1px solid #1f2933;background:#fff;padding:4px 10px;cursor:pointer}
+  .ok{background:#e3f9e5;border-color:#3f9142}
+  .phone{background:#fff;border:2px solid #323f4b;border-radius:18px;width:270px;padding:14px;min-height:250px}
+  .phone .note{background:#f0f4f8;border-radius:8px;padding:8px 10px;margin-top:10px;font-size:13px}
+  .phone button{margin-top:8px;border:1px solid #1f2933;background:#fff;padding:5px 10px;cursor:pointer;border-radius:4px}
+  .hide{display:none}
+  .row{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start}
+  .tag{font-size:11px;background:#e4e7eb;border-radius:3px;padding:1px 5px;margin-left:4px}
+</style>
+</head>
+<body>
+
+<h1>Dispatch: what we'd build instead of changing a number</h1>
+<div class="meta">For Helen Achebe &middot; from the Dispatch PM &middot; 9 Oct 2026 &middot; draft, not polished. Data ends 6&ndash;7 Sep, so September is unchecked.</div>
+
+<h2>The short version</h2>
+<p>The code fix is small: a miss counts the same as a turn-down (&minus;0.12, against +0.08 for a take), and nothing ever fades. You're right not to ship it quietly. A number change alone leaves both people hurt by 4.2 where they were: the responder who went quiet still doesn't know why, and the handler still can't tell a quiet responder from a forgotten one.</p>
+<p>So the proposal is to build for those two people, and treat the timeout and decay as the engine underneath rather than the answer.</p>
+
+<h2>What happened, in people terms</h2>
+<ul>
+  <li><b>Two things changed on 12 Aug:</b> proximity was weighted up (the long-requested ask) and the ping wait was cut from 90s to 60s. Priya's &ldquo;seasonal&rdquo; read doesn't fit the data: taken-rate fell from about 77% to 54% in 4.2's first week, and missed pings rose from 2.3% to 18.0% of pings while turn-downs barely moved.</li>
+  <li><b>Responders who miss get fewer pings and can't climb back.</b> Four responders (Vesper, Meteor Mite, The Undertow, Farlight) fell from about 28% of all pings to 2%. The Undertow's last taken ping was 17 Aug; 9 of 14 since 12 Aug were missed; the handler has 11 open tickets and no reply.</li>
+  <li><b>Handlers feel it as a mystery.</b> Kip (Meteor Mite and The Gale): one card is dead quiet, the other is on fire, &ldquo;two different products,&rdquo; and he can only say &ldquo;hang in there.&rdquo;</li>
+  <li><b>Two complaints, one cause.</b> &ldquo;Phone never goes off&rdquo; (about two thirds of tickets) and &ldquo;gone before I got a thumb on it&rdquo; (Aunt Dot, about Vesper) both fit the 60s wait plus the penalty.</li>
+  <li><b>Unanswered callouts roughly doubled:</b> 5.1% before 10 Aug, 11.2% since (43 of 837 vs 54 of 482). Small samples.</li>
+</ul>
+
+<h2>What we'd build</h2>
+<ul>
+  <li><b>For the quiet responder: recovery that doesn't depend on them, and an honest explanation.</b> A starved responder gets few pings, so they can't earn their way back by taking more. Recovery therefore has to be automatic: missed-ping penalties fade with time (decay), and missed pings are scored separately from turn-downs. A one-off fresh start for the four affected responders helps in the short term. The phone then says what is happening and when it eases, e.g. &ldquo;You've missed a few recent pings, so we're offering you fewer for now. This eases off on its own over the next X days.&rdquo; It asks nothing of them.</li>
+  <li><b>For the handler: make quiet legible.</b> Responder cards show recent pings (taken, turned down, missed) and a flag when someone is being starved by the ranking. A handler action, <i>Give a fresh start</i>, goes through the existing routing-override audit log (4.0), so it's visible rather than a hidden setting.</li>
+  <li><b>For the vanished-ping case:</b> if a ping was taken by someone else moments earlier, say so, instead of showing nothing. Optional: let the responder's handler see the same notice (Aunt Dot's &ldquo;I'd just like to know&rdquo;).</li>
+</ul>
+<p class="small">Click through the idea below. All numbers in the mock are illustrative, not real responders' data.</p>
+
+<div class="tabs">
+  <button id="t1" class="on" onclick="tab(1)">Handler console (Kip)</button>
+  <button id="t2" onclick="tab(2)">Responder phone (a quiet responder)</button>
+</div>
+
+<div class="stage" id="s1">
+  <div class="toggle"><button id="h0" class="on" onclick="hv(0)">Today</button><button id="h1" onclick="hv(1)">Proposed</button></div>
+  <div class="cards" style="margin-top:10px">
+    <div class="card"><h3>Meteor Mite</h3><div class="stat">Available &middot; 0 callouts this week</div>
+      <div id="mite" class="hide">
+        <div class="flag" id="miteflag"><b>Quiet because of ranking, not availability.</b><br>
+          Recent pings (illustrative): 2 taken &middot; 1 turned down &middot; 9 missed. Missed pings lower rank, so fewer reach this responder.<br>
+          <button onclick="fresh()">Give a fresh start</button></div>
+      </div></div>
+    <div class="card"><h3>The Gale</h3><div class="stat">Available &middot; 14 callouts this week</div>
+      <div id="gale" class="hide"><div class="flag ok">Busy: taking most pings offered.</div></div></div>
+  </div>
+  <p class="small" id="hnote">Today: two cards, two different stories, and nothing on screen to explain the gap.</p>
+</div>
+
+<div class="stage hide" id="s2">
+  <div class="toggle"><button id="p0" class="on" onclick="pv(0)">Today</button><button id="p1" onclick="pv(1)">Proposed</button></div>
+  <div class="row" style="margin-top:10px">
+    <div class="phone">
+      <b>Callouts</b>
+      <div id="phoneBody"><p class="small">No callouts.</p></div>
+    </div>
+    <div class="small" style="max-width:300px" id="pnote">Today: an empty list. A responder can't tell whether it's a quiet week, a fault, or being passed over.</div>
+  </div>
+</div>
+
+<h2>What I'm not yet sure of</h2>
+<ul>
+  <li><b>Not proven:</b> that the 60s wait is the main cause. It fits the data (misses up, turn-downs flat), but two changes shipped together. A clean test: restore 90s, keep the new weights, reset the four scores, add decay, then watch the four for two weeks.</li>
+  <li><b>Decay rate:</b> how fast penalties should fade (the &ldquo;X days&rdquo; in the phone message) is undecided and needs Marcus and Wen Li. Also unexplored: occasionally offering a low-ranked responder a nearby callout so they get a chance to take one.</li>
+  <li><b>Unanswered:</b> Marcus's 14 Aug question (does the weighting hit people who already turn jobs down?). The code treats everyone equally and the four weren't the worst before 4.2, but Wen Li hasn't replied. Scores are in memory, so a restart may have reset them (unverified).</li>
+  <li><b>Open data:</b> whether anyone recovered in September, and true time-to-accept (no answer timestamp in the data).</li>
+  <li><b>Guard rails:</b> the visibility ideas show ping outcomes only, never who a responder is (Security Policy 4.1). Whatever changes how Dispatch writes the Responder Availability Record would silently change Supply's maintenance scheduling, so scoring changes stay off that record. Also open: whether Availability Confidence (committed for 4.2, absent from release notes) is related.</li>
+  <li>Not a revert: proximity stays.</li>
+</ul>
+
+<div class="ask"><b>What I'd like from you</b>
+<ul>
+  <li>Agree the direction: automatic recovery (decay) plus visibility, with the timeout as a supporting change.</li>
+  <li>OK for me to take it to Marcus and Wen Li this week (stopgap test plan, and the unanswered 14 Aug question), and to Sofia for the real design.</li>
+  <li>Your view on whether a handler-triggered fresh start is acceptable, or whether recovery should be automatic only.</li>
+  <li>While there, the Q3 triage we haven't had: which squeezed-out 4.2 items (e.g. Availability Confidence) are still committed.</li>
+</ul></div>
+
+<p class="small">Sources: Rook wiki (Dispatch page, 4.2 release and comments, Kip and Aunt Dot interviews), Priya's handover doc, your note, Dispatch routing code and the database through 6&ndash;7 Sep.</p>
+
+<script>
+function tab(n){
+  for (var i=1;i<=2;i++){
+    document.getElementById('s'+i).classList.toggle('hide', i!==n);
+    document.getElementById('t'+i).classList.toggle('on', i===n);
+  }
+}
+function hv(n){
+  document.getElementById('h0').classList.toggle('on', n===0);
+  document.getElementById('h1').classList.toggle('on', n===1);
+  document.getElementById('mite').classList.toggle('hide', n===0);
+  document.getElementById('gale').classList.toggle('hide', n===0);
+  document.getElementById('hnote').textContent = n===0
+    ? 'Today: two cards, two different stories, and nothing on screen to explain the gap.'
+    : 'Proposed: the gap is explained, and the handler has something to do besides say "hang in there".';
+}
+function fresh(){
+  document.getElementById('miteflag').innerHTML =
+    '<b>Fresh start requested.</b><br>Recorded in the routing override audit log. Meteor Mite\'s past misses stop counting against ranking; the next nearby callouts can reach them.';
+  document.getElementById('miteflag').className = 'flag ok';
+}
+function pv(n){
+  document.getElementById('p0').classList.toggle('on', n===0);
+  document.getElementById('p1').classList.toggle('on', n===1);
+  var b = document.getElementById('phoneBody');
+  if (n===0){
+    b.innerHTML = '<p class="small">No callouts.</p>';
+    document.getElementById('pnote').textContent = "Today: an empty list. A responder can't tell whether it's a quiet week, a fault, or being passed over.";
+  } else {
+    b.innerHTML =
+      '<div class="note"><b>It\'s been quiet.</b><br>You missed some recent pings, so we're offering you fewer for now. This eases off on its own over the next X days. Nothing you need to do.<br><button onclick="gone()">See a missed ping</button></div>';
+    document.getElementById('pnote').textContent = 'Proposed: says why it is quiet and that it eases on its own (X is still to be set). Tap the button to see the "gone before I answered" case.';
+  }
+}
+function gone(){
+  document.getElementById('phoneBody').innerHTML =
+    '<div class="note"><b>Too late, this one was taken.</b><br>Another responder accepted it a few seconds before you did. It was open for 60s. Your handler can see this too.</div>';
+}
+</script>
+</body>
+</html>

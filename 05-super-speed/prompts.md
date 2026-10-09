@@ -15,7 +15,19 @@ prompt library built from your own questions.
 ---
 
 ### 1.
+using the wiki, one Word doc and helens note - can you create a brief for the director?
 
 ### 2.
+reading the brief - i don't fully understand how a quiet responder can act on recovery just because they know they are getting less now
 
 ### 3.
+so the proposal is to give responders more visibility is why/what is happening, and give handlers the options to refresh? nothing else changes in response time or weighted code?
+
+### 4.
+Can we draft this as a 1 pager in a way someone at helen (ELTs level can understand (without the click through to start)
+
+### 5.
+can you make this a better style? super hero themed but still professional?
+
+### 6.
+can you include what a callout looks like while its waiting for a response as well

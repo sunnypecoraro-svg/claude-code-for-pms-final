@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rook Dispatch console: prototype</title>
+<style>
+  :root{
+    --bg:#0a1020; --panel:#111a2e; --panel2:#17233d; --line:#26344f;
+    --text:#e8eef9; --muted:#93a4c3; --gold:#f5b301; --red:#e63946; --teal:#2ec4b6; --slate:#6b7a99; --blue:#4da3ff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font:14px/1.5 "Segoe UI",Arial,Helvetica,sans-serif;color:var(--text);background:var(--bg);
+       background-image:radial-gradient(circle at 20% -10%,#1b2a4d 0,transparent 45%),radial-gradient(rgba(255,255,255,.035) 1px,transparent 1px);
+       background-size:auto,14px 14px}
+  .disp{font-family:"Arial Black","Segoe UI",Arial,sans-serif;text-transform:uppercase;letter-spacing:.06em}
+
+  .top{display:flex;align-items:center;justify-content:space-between;padding:10px 20px;background:linear-gradient(90deg,#0d1730,#14213f);border-bottom:3px solid var(--gold)}
+  .brand{display:flex;align-items:center;gap:12px}
+  .brand svg{width:34px;height:34px}
+  .brand b{font-size:15px;color:#fff}
+  .brand span{display:block;font-size:11px;color:var(--gold);letter-spacing:.14em;text-transform:uppercase}
+  .who{font-size:12.5px;color:var(--muted);text-align:right}
+  .who b{color:var(--text)}
+
+  .banner{background:#2a2108;border-bottom:1px solid #5c4a0e;color:#f3d77a;padding:6px 20px;font-size:12.5px}
+  .banner b{color:var(--gold)}
+
+  .wrap{display:flex;min-height:calc(100vh - 95px)}
+  nav{width:190px;background:#0c1428;border-right:1px solid var(--line);padding-top:14px}
+  nav a{display:flex;align-items:center;gap:8px;color:var(--muted);padding:10px 18px;cursor:pointer;font-size:13.5px;border-left:3px solid transparent}
+  nav a:hover{background:var(--panel);color:var(--text)}
+  nav a.on{background:var(--panel2);color:#fff;border-left-color:var(--gold)}
+  main{flex:1;padding:22px 26px;max-width:1000px}
+  h1{font-size:20px;margin:0;color:#fff}
+  .sub{color:var(--muted);font-size:13px;margin:2px 0 16px}
+
+  .cards{display:flex;gap:16px;flex-wrap:wrap}
+  .card{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px 12px 16px;width:320px;cursor:pointer;
+        transition:transform .12s,box-shadow .12s,border-color .12s;overflow:hidden}
+  .card:before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--slate)}
+  .card.s-busy:before{background:var(--teal)}
+  .card.s-quiet:before{background:var(--gold)}
+  .card.s-fresh:before{background:var(--blue)}
+  .card:hover{transform:translateY(-2px);border-color:#3a4d73;box-shadow:0 6px 18px rgba(0,0,0,.4)}
+  .card.sel{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold),0 6px 18px rgba(0,0,0,.4)}
+  .chead{display:flex;align-items:center;gap:10px}
+  .avatar{width:38px;height:38px;border-radius:50%;background:var(--panel2);border:2px solid var(--line);display:flex;align-items:center;justify-content:center;flex:none}
+  .avatar svg{width:24px;height:24px}
+  .card h3{margin:0;font-size:15px;color:#fff;flex:1}
+  .stat{color:var(--muted);font-size:13px;margin:5px 0 0}
+  .badge{font-size:10.5px;border-radius:4px;padding:3px 8px;font-family:"Arial Black",Arial,sans-serif;letter-spacing:.08em;text-transform:uppercase}
+  .b-busy{background:rgba(46,196,182,.15);color:var(--teal);border:1px solid rgba(46,196,182,.5)}
+  .b-quiet{background:rgba(245,179,1,.15);color:var(--gold);border:1px solid rgba(245,179,1,.55)}
+  .b-fresh{background:rgba(77,163,255,.15);color:var(--blue);border:1px solid rgba(77,163,255,.5)}
+  .alert{color:var(--gold);font-size:12.5px;margin-top:6px}
+  .hint{font-size:11.5px;color:var(--slate);margin-top:8px;text-transform:uppercase;letter-spacing:.08em}
+
+  .detail{background:var(--panel);border:1px solid var(--line);border-top:3px solid var(--gold);border-radius:10px;margin-top:18px;padding:18px 20px}
+  .detail h2{margin:0;font-size:17px;color:#fff}
+  .tabs{margin:12px 0 14px;border-bottom:1px solid var(--line)}
+  .tabs button{border:none;background:none;padding:8px 16px;cursor:pointer;font-size:13.5px;color:var(--muted);border-bottom:3px solid transparent;font-family:inherit}
+  .tabs button:hover{color:var(--text)}
+  .tabs button.on{color:#fff;font-weight:bold;border-bottom-color:var(--gold)}
+  .dots{display:flex;gap:5px;flex-wrap:wrap;margin:8px 0 6px}
+  .dot{width:22px;height:22px;border-radius:5px}
+  .d-t{background:var(--teal)}.d-d{background:var(--slate)}.d-m{background:var(--red)}
+  .legend{font-size:12px;color:var(--muted)}
+  .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin:0 4px 0 12px;vertical-align:middle}
+  .box{border-radius:8px;padding:12px 14px;margin:14px 0 2px;font-size:13.5px}
+  .box b{color:#fff}
+  .box.warn{background:rgba(245,179,1,.1);border:1px solid rgba(245,179,1,.5)}
+  .box.ok{background:rgba(46,196,182,.1);border:1px solid rgba(46,196,182,.5)}
+  .box.info{background:var(--panel2);border:1px solid var(--line)}
+  .box a{color:var(--gold)}
+  button.primary{background:var(--gold);color:#1a1300;border:none;padding:9px 18px;border-radius:6px;cursor:pointer;font-size:13px;font-family:"Arial Black",Arial,sans-serif;text-transform:uppercase;letter-spacing:.06em;margin-top:6px}
+  button.primary:hover{background:#ffc933}
+  button.sec{background:transparent;color:var(--text);border:1px solid var(--slate);padding:9px 18px;border-radius:6px;cursor:pointer;font-size:13px}
+  button.sec:hover{border-color:var(--text)}
+
+  table{border-collapse:collapse;width:100%;background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);font-size:13.5px}
+  th{background:var(--panel2);color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.08em}
+  tr.newrow td{background:rgba(245,179,1,.08)}
+
+  .phonewrap{display:flex;gap:26px;flex-wrap:wrap;align-items:flex-start}
+  .phone{width:280px;border:3px solid #3a4d73;border-radius:28px;background:#0d1528;padding:16px 14px;min-height:340px;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+  .phone .bar{font-size:11px;color:var(--slate);display:flex;justify-content:space-between;margin-bottom:10px}
+  .phone h4{margin:0 0 10px;font-size:15px;color:#fff}
+  .pnote{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:11px 13px;font-size:13.5px}
+  .pnote b{color:#fff}
+  .pnote.green{background:rgba(46,196,182,.12);border-color:rgba(46,196,182,.5)}
+  .empty{color:var(--slate);font-size:12.5px;margin-top:16px}
+
+  .modal-bg{position:fixed;inset:0;background:rgba(3,7,16,.75);display:none;align-items:center;justify-content:center;z-index:5}
+  .modal-bg.show{display:flex}
+  .modal{background:var(--panel);border:1px solid var(--line);border-top:3px solid var(--gold);border-radius:10px;padding:22px;width:460px;max-width:92vw}
+  .modal h3{margin:0 0 10px;color:#fff}
+  .modal p{margin:0 0 10px}
+  .modal .btns{display:flex;gap:10px;justify-content:flex-end;margin-top:16px}
+  .toast{position:fixed;bottom:22px;right:22px;background:var(--gold);color:#1a1300;padding:11px 18px;border-radius:6px;font-size:13.5px;font-weight:bold;display:none;z-index:6;box-shadow:0 6px 18px rgba(0,0,0,.5)}
+  .hide{display:none}
+
+  .co{background:var(--panel);border:1px solid var(--line);border-top:3px solid var(--red);border-radius:10px;padding:16px 18px}
+  .co.done{border-top-color:var(--teal)}
+  .co.none{border-top-color:var(--red)}
+  .cohead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+  .cohead h2{margin:0;font-size:16px;color:#fff}
+  .tag{display:inline-block;font-size:11px;border:1px solid var(--slate);color:var(--muted);border-radius:4px;padding:1px 7px;margin:6px 6px 0 0}
+  .timer{font-family:"Arial Black",Arial,sans-serif;font-size:28px;color:var(--gold);text-align:right;line-height:1}
+  .timer small{display:block;font-family:"Segoe UI",Arial,sans-serif;font-size:11px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-top:4px}
+  .meter{height:8px;background:var(--panel2);border-radius:4px;overflow:hidden;margin:12px 0 4px}
+  .meter div{height:100%;background:var(--gold);transition:width 1s linear}
+  .meter div.low{background:var(--red)}
+  .queue{list-style:none;margin:12px 0 0;padding:0}
+  .queue li{display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--line);border-radius:8px;margin-bottom:6px;background:var(--panel2)}
+  .queue li.now{border-color:var(--gold);background:rgba(245,179,1,.1)}
+  .queue li .pos{font-family:"Arial Black",Arial,sans-serif;color:var(--slate);width:20px}
+  .queue li .nm{flex:1;color:#fff}
+  .queue li .nt{font-size:12px;color:var(--muted)}
+  .st{font-size:10.5px;font-family:"Arial Black",Arial,sans-serif;letter-spacing:.07em;text-transform:uppercase;padding:3px 8px;border-radius:4px}
+  .st-wait{color:var(--slate);border:1px solid var(--line)}
+  .st-now{color:#1a1300;background:var(--gold)}
+  .st-missed{color:#fff;background:var(--red)}
+  .st-down{color:#fff;background:var(--slate)}
+  .st-taken{color:#05201d;background:var(--teal)}
+  .log{font-size:12.5px;color:var(--muted);margin-top:10px}
+  .log div{padding:2px 0}
+  .pbtns{display:flex;gap:8px;margin-top:12px}
+  .pbtns button{flex:1;padding:9px 6px;border-radius:8px;border:none;cursor:pointer;font-size:13px;font-weight:bold}
+  .pbtns .acc{background:var(--teal);color:#05201d}
+  .pbtns .dec{background:var(--panel2);color:var(--text);border:1px solid var(--slate)}
+  .skip{margin-top:10px;background:none;border:none;color:var(--slate);font-size:12px;cursor:pointer;text-decoration:underline;padding:0}
+  .ping{background:#1d2c4d;border:1px solid var(--gold);border-radius:12px;padding:12px 13px}
+  .ping b{color:#fff}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="brand">
+    <svg viewBox="0 0 40 40" aria-hidden="true"><path d="M20 2 36 8v12c0 9-6.5 15.5-16 18C10.5 35.500 4 29 4 20V8z" fill="#f5b301"/><path d="M13 29v-3h2v-7l-2-2v-5h3v2h2v-2h4v2h2v-2h3v5l-2 2v7h2v3z" fill="#0a1020"/></svg>
+    <div><b class="disp">Rook Dispatch</b><span>Handler console</span></div>
+  </div>
+  <div class="who">Signed in as <b>Kip</b> (handler)<br>9 Oct 2026</div>
+</div>
+<div class="banner"><b>Prototype.</b> Illustrative data only, not real responders' figures. Click a responder card to explore, then try <i>Request a fresh start</i> on Meteor Mite.</div>
+
+<div class="wrap">
+  <nav>
+    <a id="n-cov" class="on" onclick="nav('cov')">Coverage</a>
+    <a id="n-live" onclick="nav('live')">Live callouts</a>
+    <a id="n-aud" onclick="nav('aud')">Routing audit log <span id="audcount" class="badge b-fresh hide">new</span></a>
+  </nav>
+
+  <main>
+    <section id="v-cov">
+      <h1 class="disp">Coverage</h1>
+      <div class="sub">Your responders &middot; last 14 days</div>
+      <div class="cards" id="cards"></div>
+      <div id="detail"></div>
+    </section>
+
+    <section id="v-live" class="hide">
+      <h1 class="disp">Live callouts</h1>
+      <div class="sub">A callout is offered to one responder at a time. If they turn it down or the ping wait runs out, it moves to the next.</div>
+      <div id="live"></div>
+    </section>
+
+    <section id="v-aud" class="hide">
+      <h1 class="disp">Routing audit log</h1>
+      <div class="sub">Every manual change to how responders are ranked. Visible to handlers and Rook staff.</div>
+      <table>
+        <thead><tr><th>When</th><th>Action</th><th>Responder</th><th>By</th></tr></thead>
+        <tbody id="auditbody"></tbody>
+      </table>
+    </section>
+  </main>
+</div>
+
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <h3 class="disp" style="font-size:15px">Fresh start for Meteor Mite?</h3>
+    <p>Past missed pings will stop counting against Meteor Mite's ranking, so nearby callouts can reach them again.</p>
+    <p class="stat">This is recorded in the routing audit log under your name. It doesn't change anyone else's ranking, and it doesn't change how pings are ranked in general.</p>
+    <div class="btns"><button class="sec" onclick="closeModal()">Cancel</button><button class="primary" style="margin-top:0" onclick="confirmFresh()">Request fresh start</button></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// Illustrative data. Order of dots = oldest to newest of the last 14 pings.
+var R = {
+  mite: {
+    name: 'Meteor Mite',
+    available: 'Available',
+    callouts: 0,
+    pings: 'TMDMMMMMMMTMMM'.split(''),   // T taken, D turned down, M missed
+    fresh: false
+  },
+  gale: {
+    name: 'The Gale',
+    available: 'Available',
+    callouts: 14,
+    pings: 'TTTTDTTTTMTTTT'.split(''),
+    fresh: false
+  }
+};
+var selected = null, tab = 'handler';
+var audit = [
+  {when: '21 Sep 2026, 14:12', action: 'Routing override on callout #4417', who: 'Another handler', resp: 'Callout-level'}
+];
+var MASK = '<svg viewBox="0 0 24 24"><path d="M2 9c3-3 6-3 10-1 4-2 7-2 10 1-.5 5-3 8-6.500 8-2 0-3-1-3.500-2-.5 1-1.500 2-3.500 2C5 17 2.500 14 2 9z" fill="#f5b301"/><ellipse cx="8" cy="11.500" rx="2.200" ry="1.500" fill="#111a2e"/><ellipse cx="16" cy="11.500" rx="2.200" ry="1.500" fill="#111a2e"/></svg>';
+
+function counts(r){ var c={T:0,D:0,M:0}; r.pings.forEach(function(p){c[p]++}); return c; }
+function quiet(r){ var c=counts(r); return !r.fresh && c.M >= 5; }
+
+function renderCards(){
+  var h='';
+  Object.keys(R).forEach(function(k){
+    var r=R[k], c=counts(r), q=quiet(r);
+    var badge = r.fresh ? '<span class="badge b-fresh">Fresh start</span>'
+              : q ? '<span class="badge b-quiet">Quiet</span>'
+              : '<span class="badge b-busy">Busy</span>';
+    var cls = r.fresh ? 's-fresh' : q ? 's-quiet' : 's-busy';
+    h += '<div class="card '+cls+(selected===k?' sel':'')+'" onclick="pick(\''+k+'\')">'
+      + '<div class="chead"><div class="avatar">'+MASK+'</div><h3>'+r.name+'</h3>'+badge+'</div>'
+      + '<div class="stat">'+r.available+' &middot; '+r.callouts+' callouts this week</div>'
+      + '<div class="stat">Last 14 pings: '+c.T+' taken, '+c.D+' turned down, '+c.M+' missed</div>'
+      + (q ? '<div class="alert">Ranked low because of missed pings, not availability.</div>' : '')
+      + '<div class="hint">Click for detail</div></div>';
+  });
+  document.getElementById('cards').innerHTML=h;
+}
+
+function dots(r){
+  return '<div class="dots">'+r.pings.map(function(p){return '<div class="dot d-'+p.toLowerCase()+'" title="'+({T:'Taken',D:'Turned down',M:'Missed'})[p]+'"></div>'}).join('')+'</div>'
+   + '<div class="legend"><i class="d-t"></i>Taken<i class="d-d"></i>Turned down<i class="d-m"></i>Missed &nbsp;(oldest to newest)</div>';
+}
+
+function renderDetail(){
+  var el=document.getElementById('detail');
+  if(!selected){ el.innerHTML=''; return; }
+  var r=R[selected], q=quiet(r), c=counts(r);
+  var h='<div class="detail"><h2 class="disp" style="font-size:16px">'+r.name+'</h2><div class="stat">'+r.available+' &middot; ping wait 60s (set in the release)</div>'
+   + '<div class="tabs"><button class="'+(tab==='handler'?'on':'')+'" onclick="setTab(\'handler\')">What you see</button>'
+   + '<button class="'+(tab==='phone'?'on':'')+'" onclick="setTab(\'phone\')">What '+r.name+' sees on their phone</button></div>';
+  if(tab==='handler'){
+    h += dots(r);
+    if(r.fresh){
+      h += '<div class="box ok"><b>Fresh start applied.</b> Past missed pings no longer count against '+r.name+'. Nearby callouts can reach them again. It is recorded in the <a href="#" onclick="nav(\'aud\');return false">routing audit log</a>.</div>';
+    } else if(q){
+      h += '<div class="box warn"><b>Why '+r.name+' is quiet.</b> '+r.name+' is available, but missed pings lower their ranking, so fewer pings reach them. Today that effect only lifts when they take pings, and they are getting few. Penalties are being changed to fade on their own.<br><br>'
+         + '<button class="primary" onclick="openModal()">Request a fresh start</button></div>';
+    } else {
+      h += '<div class="box info"><b>Nothing to do.</b> '+r.name+' is taking most of the pings they are offered, so ranking is working as intended.</div>';
+    }
+  } else {
+    h += '<div class="phonewrap"><div class="phone"><div class="bar"><span>Rook Dispatch</span><span>9:41</span></div><h4>Callouts</h4>';
+    if(r.fresh){
+      h += '<div class="pnote green"><b>Your ranking has been refreshed.</b><br>Your handler reset it. You will be offered nearby callouts as normal.</div>';
+    } else if(q){
+      h += '<div class="pnote"><b>It\'s been quiet.</b><br>You\'ve missed a few recent pings, so we\'re offering you fewer for now. This eases off on its own. Nothing you need to do.</div>';
+    } else {
+      h += '<div class="pnote"><b>No callouts right now.</b><br>You\'re available. We\'ll ping you when one comes up near you.</div>';
+    }
+    h += '<div class="empty">Missed or too-late pings are explained here as well, e.g. &ldquo;Taken by another responder a few seconds before you answered.&rdquo;</div></div>'
+      + '<div class="stat" style="max-width:300px">This is the message the responder sees. It explains what is happening and asks nothing of them. Without it, a quiet responder has no way to tell a quiet week from being forgotten.</div></div>';
+  }
+  h += '</div>';
+  el.innerHTML=h;
+}
+
+function pick(k){ selected=k; tab='handler'; renderCards(); renderDetail(); }
+function setTab(t){ tab=t; renderDetail(); }
+function openModal(){ document.getElementById('modal').classList.add('show'); }
+function closeModal(){ document.getElementById('modal').classList.remove('show'); }
+function confirmFresh(){
+  R.mite.fresh=true;
+  var d=new Date();
+  var when=d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})+', '+d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  audit.unshift({when:when, action:'Fresh start requested', who:'Kip (handler)', resp:'Meteor Mite', isnew:true});
+  closeModal(); renderCards(); renderDetail(); renderAudit();
+  document.getElementById('audcount').classList.remove('hide');
+  toast('Fresh start recorded for Meteor Mite');
+}
+function renderAudit(){
+  document.getElementById('auditbody').innerHTML = audit.map(function(a){
+    return '<tr'+(a.isnew?' class="newrow"':'')+'><td>'+a.when+'</td><td>'+a.action+'</td><td>'+a.resp+'</td><td>'+a.who+'</td></tr>';
+  }).join('');
+}
+function nav(v){
+  ['cov','live','aud'].forEach(function(x){
+    document.getElementById('v-'+x).classList.toggle('hide', v!==x);
+    document.getElementById('n-'+x).classList.toggle('on', v===x);
+  });
+  if(v==='aud') document.getElementById('audcount').classList.add('hide');
+  if(v==='live') renderLive();
+}
+
+// ---- Live callout: one callout, offered to one responder at a time ----
+var WAIT = 60;
+var CO = {state:'idle', idx:0, secs:WAIT, results:[], log:[], queue:[], timer:null};
+
+function buildQueue(){
+  // Illustrative ranking. A Meteor Mite who has been starved ranks last; after a fresh start they are nearest and ranked first.
+  var q = R.mite.fresh
+    ? [{n:'Meteor Mite',d:'5 min away'},{n:'The Gale',d:'9 min away'},{n:'Vesper',d:'12 min away'}]
+    : [{n:'The Gale',d:'9 min away'},{n:'Vesper',d:'12 min away'},{n:'Meteor Mite',d:'5 min away'}];
+  q.forEach(function(x){ if(x.n==='Meteor Mite' && !R.mite.fresh) x.note='nearest, but ranked low after missed pings'; });
+  return q;
+}
+function startCallout(){
+  clearInterval(CO.timer);
+  CO = {state:'pinging', idx:0, secs:WAIT, results:[], log:['Callout created. Offered to '+buildQueue()[0].n+'.'], queue:buildQueue(), timer:null};
+  CO.timer = setInterval(tick, 1000);
+  renderLive();
+}
+function tick(){
+  if(CO.state!=='pinging') return;
+  CO.secs--;
+  if(CO.secs<=0){ outcome('missed'); } else { renderLive(); }
+}
+function skipAhead(){ if(CO.state==='pinging'){ CO.secs=0; outcome('missed'); } }
+function outcome(kind){
+  if(CO.state!=='pinging') return;
+  var who=CO.queue[CO.idx].n;
+  CO.results[CO.idx]=kind;
+  if(kind==='taken'){
+    CO.state='taken'; clearInterval(CO.timer);
+    CO.log.push(who+' took it. Callout assigned.');
+  } else {
+    CO.log.push(who+(kind==='missed' ? ' did not answer in '+WAIT+'s (missed).' : ' turned it down.'));
+    CO.idx++; CO.secs=WAIT;
+    if(CO.idx>=CO.queue.length){ CO.state='none'; clearInterval(CO.timer); CO.log.push('No responder took it. Callout unanswered.'); }
+    else CO.log.push('Offered to '+CO.queue[CO.idx].n+'.');
+  }
+  renderLive();
+}
+function stLabel(k){ return ({missed:'<span class="st st-missed">Missed</span>',down:'<span class="st st-down">Turned down</span>',taken:'<span class="st st-taken">Taken</span>'})[k]; }
+
+function renderLive(){
+  var el=document.getElementById('live'); if(!el) return;
+  if(CO.state==='idle'){
+    el.innerHTML='<div class="box info"><b>No callout waiting.</b> Send a demo callout to see what the handler and the responder each see while it waits for an answer.<br><br><button class="primary" onclick="startCallout()">Send a demo callout</button></div>';
+    return;
+  }
+  var cls = CO.state==='taken'?'done':CO.state==='none'?'none':'';
+  var h='<div class="co '+cls+'"><div class="cohead"><div><h2 class="disp">Callout #4421</h2>'
+    +'<span class="tag">Structural entry</span><span class="tag">Southport</span><span class="tag">Entered 09:41</span></div>';
+  if(CO.state==='pinging'){
+    h+='<div class="timer">0:'+(CO.secs<10?'0':'')+CO.secs+'<small>ping wait left</small></div></div>'
+      +'<div class="meter"><div class="'+(CO.secs<=15?'low':'')+'" style="width:'+Math.round(CO.secs/WAIT*100)+'%"></div></div>';
+  } else if(CO.state==='taken'){
+    h+='<div><span class="st st-taken">Assigned</span></div></div>';
+  } else {
+    h+='<div><span class="st st-missed">Unanswered</span></div></div>'
+      +'<div class="box warn" style="margin-top:12px"><b>Nobody took this callout.</b> Every responder offered it turned it down or ran out of time. These are the unanswered callouts that roughly doubled after 4.2.</div>';
+  }
+  h+='<ul class="queue">';
+  CO.queue.forEach(function(x,i){
+    var s = CO.results[i] ? stLabel(CO.results[i]==='down'?'down':CO.results[i]) : (CO.state==='pinging' && i===CO.idx ? '<span class="st st-now">Pinged now</span>' : '<span class="st st-wait">Waiting</span>');
+    h+='<li class="'+(CO.state==='pinging'&&i===CO.idx?'now':'')+'"><span class="pos">'+(i+1)+'</span><span class="nm">'+x.n+'<div class="nt">'+x.d+(x.note?' &middot; '+x.note:'')+'</div></span>'+s+'</li>';
+  });
+  h+='</ul><div class="log">'+CO.log.map(function(l){return '<div>'+l+'</div>'}).join('')+'</div>';
+  if(CO.state!=='pinging') h+='<div style="margin-top:12px"><button class="primary" onclick="startCallout()">Send another demo callout</button></div>';
+  h+='</div>';
+
+  // Phone: what the pinged responder sees
+  if(CO.state==='pinging'){
+    var who=CO.queue[CO.idx].n;
+    h+='<div class="phonewrap" style="margin-top:20px"><div class="phone"><div class="bar"><span>'+who+'\'s phone</span><span>9:41</span></div><h4>New callout</h4>'
+      +'<div class="ping"><b>Structural entry &middot; Southport</b><br>'+CO.queue[CO.idx].d+'<br><span style="color:var(--gold)">Offer ends in '+CO.secs+'s</span></div>'
+      +'<div class="pbtns"><button class="acc" onclick="outcome(\'taken\')">Take it</button><button class="dec" onclick="outcome(\'down\')">Turn down</button></div>'
+      +'<button class="skip" onclick="skipAhead()">Skip ahead: let the '+WAIT+'s run out</button></div>'
+      +'<div class="stat" style="max-width:300px">Demo controls. Use the phone to answer as '+who+', or skip ahead to see a missed ping. The handler screen above updates as you go. The countdown is real-time.</div></div>';
+  } else {
+    var last=CO.queue[Math.min(CO.idx, CO.queue.length-1)];
+    var msg = CO.state==='taken'
+      ? '<div class="pnote green"><b>Callout assigned.</b><br>'+CO.queue[CO.idx].n+' is attending Southport.</div>'
+      : '<div class="pnote"><b>Too late, this one has moved on.</b><br>Nobody took it in time.</div>';
+    h+='<div class="phonewrap" style="margin-top:20px"><div class="phone"><div class="bar"><span>Responder phone</span><span>9:42</span></div><h4>Callouts</h4>'+msg
+      +'<div class="empty">A responder who runs out of time is told what happened, e.g. &ldquo;Offer ended after 60s. It has been passed to the next responder.&rdquo; They are not left guessing.</div></div></div>';
+  }
+  el.innerHTML=h;
+}
+function toast(msg){
+  var t=document.getElementById('toast'); t.textContent=msg; t.style.display='block';
+  setTimeout(function(){t.style.display='none'},2800);
+}
+renderCards(); renderDetail(); renderAudit();
+</script>
+</body>
+</html>
